@@ -3,11 +3,27 @@ venv/
 __pycache__/
 *.pyc
 .env
+.venv/
 
 # React
 node_modules/
+build/
+dist/
 
 # OS / Editor
 .DS_Store
 Thumbs.db
 .vscode/
+*.swp
+*.swo
+
+# Temporary/Test files
+New folder (4)/
+*.tmp
+*.bak
+.idea/
+
+# Project files
+.pytest_cache/
+coverage/
+htmlcov/
