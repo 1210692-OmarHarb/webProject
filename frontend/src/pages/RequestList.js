@@ -69,7 +69,10 @@ function RequestList() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -158,7 +161,7 @@ function RequestList() {
                       <strong>Address:</strong> {request.address}
                     </p>
                     <p>
-                      <strong>Created:</strong> {formatDate(request.created_at)}
+                      <strong>Created:</strong> {formatDate(request.timestamps?.created_at || request.created_at)}
                     </p>
                   </div>
                   <span className={`status-badge status-${request.status}`}>

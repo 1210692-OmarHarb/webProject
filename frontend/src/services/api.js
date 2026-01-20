@@ -9,6 +9,17 @@ const api = axios.create({
   },
 });
 
+// Helpers to include header keys stored in localStorage
+const getStaffHeaders = () => {
+  const key = localStorage.getItem("staffKey");
+  return key ? { "X-Staff-Key": key } : {};
+};
+
+const getAgentHeaders = () => {
+  const id = localStorage.getItem("agentId");
+  return id ? { "X-Agent-Id": id } : {};
+};
+
 // ==================== Requests API ====================
 export const requestsAPI = {
   // Get all requests
@@ -35,6 +46,12 @@ export const requestsAPI = {
     api.get(
       `/requests/nearby/search?coordinates=${coordinates}&distance=${distance}`,
     ),
+
+  // Module 3: auto-assign and milestone
+  autoAssign: (id) =>
+    api.post(`/requests/${id}/auto-assign`, null, { headers: { ...getStaffHeaders() } }),
+  addMilestone: (id, payload) =>
+    api.patch(`/requests/${id}/milestone`, payload, { headers: { ...getAgentHeaders() } }),
 };
 
 // ==================== Categories API ====================
@@ -102,6 +119,30 @@ export const performanceAPI = {
         meta: JSON.stringify(meta),
       },
     }),
+};
+
+// ==================== Citizens API ====================
+export const citizensAPI = {
+  // Get all citizens
+  getAll: (params = {}) => api.get("/citizens/", { params }),
+
+  // Get specific citizen
+  getById: (id) => api.get(`/citizens/${id}`),
+
+  // Create new citizen
+  create: (data) => api.post("/citizens/", data),
+
+  // Update citizen
+  update: (id, data) => api.patch(`/citizens/${id}`, data),
+};
+
+// ==================== Agents API (Module 3) ====================
+export const agentsAPI = {
+  list: (params = {}) => api.get("/agents/", { params }),
+  create: (data) => api.post("/agents/", data, { headers: { ...getStaffHeaders() } }),
+  getById: (id) => api.get(`/agents/${id}`),
+  assignRequest: (requestId) => api.post(`/agents/assign/${requestId}`, null, { headers: { ...getStaffHeaders() } }),
+  addMilestone: (requestId, payload) => api.patch(`/agents/milestone/${requestId}`, payload, { headers: { ...getAgentHeaders() } }),
 };
 
 export default api;

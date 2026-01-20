@@ -5,6 +5,11 @@ import HomePage from "./pages/HomePage";
 import CreateRequest from "./pages/CreateRequest";
 import RequestList from "./pages/RequestList";
 import RequestDetails from "./pages/RequestDetails";
+import CitizenList from "./pages/CitizenList";
+import CitizenProfile from "./pages/CitizenProfile";
+import CitizenRegister from "./pages/CitizenRegister";
+import Agents from "./pages/Agents";
+import AgentDetail from "./pages/AgentDetail";
 
 function App() {
   return (
@@ -31,6 +36,16 @@ function App() {
                   Submit Request
                 </Link>
               </li>
+              <li className="nav-item">
+                <Link to="/citizens" className="nav-link">
+                  Citizens
+                </Link>
+              </li>
+              <li className="nav-item">
+                <Link to="/agents" className="nav-link">
+                  Agents
+                </Link>
+              </li>
             </ul>
           </div>
         </nav>
@@ -40,6 +55,11 @@ function App() {
           <Route path="/create" element={<CreateRequest />} />
           <Route path="/requests" element={<RequestList />} />
           <Route path="/requests/:id" element={<RequestDetails />} />
+          <Route path="/citizens" element={<CitizenList />} />
+          <Route path="/citizens/:id" element={<CitizenProfile />} />
+          <Route path="/citizens/register" element={<CitizenRegister />} />
+          <Route path="/agents" element={<Agents />} />
+          <Route path="/agents/:id" element={<AgentDetail />} />
         </Routes>
       </div>
     </Router>

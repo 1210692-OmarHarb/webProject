@@ -7,12 +7,25 @@ from typing import List
 router = APIRouter()
 
 
+def convert_objectids(obj):
+    """Recursively convert all ObjectIds to strings in a document"""
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    elif isinstance(obj, dict):
+        return {key: convert_objectids(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_objectids(item) for item in obj]
+    else:
+        return obj
+
+
 @router.get("/", response_model=List[Category])
 async def get_all_categories(active_only: bool = True):
     """Get all categories"""
     try:
         query = {"active": True} if active_only else {}
         categories = list(categories_collection.find(query))
+        categories = [convert_objectids(cat) for cat in categories]
         return categories
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -25,6 +38,7 @@ async def get_category(category_id: str):
         category = categories_collection.find_one({"_id": ObjectId(category_id)})
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
+        category = convert_objectids(category)
         return category
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

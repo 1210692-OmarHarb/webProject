@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, GetJsonSchemaHandler
+from pydantic import BaseModel, Field, GetJsonSchemaHandler, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from bson import ObjectId
@@ -33,6 +33,8 @@ class Location(BaseModel):
 
 
 class Category(BaseModel):
+    model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
+    
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str
     description: Optional[str] = None
@@ -41,14 +43,12 @@ class Category(BaseModel):
     active: bool = True
     created_at: Optional[datetime] = None
 
-    class Config:
-        json_encoders = {ObjectId: str}
-        populate_by_name = True
-
 
 # ==================== User Models ====================
 
 class User(BaseModel):
+    model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
+    
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     username: str
     email: str
@@ -60,14 +60,25 @@ class User(BaseModel):
     active: bool = True
     created_at: Optional[datetime] = None
 
-    class Config:
-        json_encoders = {ObjectId: str}
-        populate_by_name = True
-
 
 # ==================== Citizen Models ====================
 
+class ContactPreferences(BaseModel):
+    email_notifications: bool = True
+    sms_notifications: bool = False
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class PrivacyControls(BaseModel):
+    allow_profile_visibility: bool = True
+    allow_request_history_visibility: bool = False
+    data_sharing_consent: bool = False
+
+
 class CitizenProfile(BaseModel):
+    model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
+    
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     full_name: str
     email: Optional[str] = None
@@ -75,17 +86,46 @@ class CitizenProfile(BaseModel):
     neighborhood: Optional[str] = None
     city: Optional[str] = None
     zone_id: Optional[str] = None
-    verification_state: str = "unverified"  # verified, unverified
+    verification_state: str = "unverified"  # verified, unverified, pending
+    verification_token: Optional[str] = None  # OTP stub
+    verification_token_expires: Optional[datetime] = None
+    is_anonymous: bool = False
+    contact_preferences: Optional[ContactPreferences] = None
+    privacy_controls: Optional[PrivacyControls] = None
     avg_rating: Optional[float] = 0.0
     total_requests: int = 0
     created_at: Optional[datetime] = None
 
-    class Config:
-        json_encoders = {ObjectId: str}
-        populate_by_name = True
-
 
 # ==================== Service Request Models ====================
+
+class Comment(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    request_id: PyObjectId
+    author_type: str  # citizen, agent, staff
+    author_id: PyObjectId
+    author_name: str
+    content: str = Field(..., min_length=1, max_length=1000)
+    parent_comment_id: Optional[PyObjectId] = None  # For threaded comments
+    is_internal: bool = False  # Internal notes vs public comments
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
+
+
+class Rating(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    request_id: PyObjectId
+    citizen_id: PyObjectId
+    stars: int = Field(..., ge=1, le=5)  # 1-5 stars
+    reason_code: Optional[str] = None  # quick_resolution, poor_quality, incomplete, excellent_service
+    comment: Optional[str] = None
+    dispute_flag: bool = False
+    dispute_reason: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
+
 
 class WorkflowState(BaseModel):
     current_state: str  # new, triaged, assigned, in_progress, resolved, closed
@@ -150,9 +190,7 @@ class ServiceRequest(BaseModel):
     internal_notes: List[str] = []
     duplicates: Optional[Duplicates] = None
 
-    class Config:
-        json_encoders = {ObjectId: str}
-        populate_by_name = True
+    model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
 
 
 class ServiceRequestResponse(BaseModel):
@@ -167,9 +205,7 @@ class ServiceRequestResponse(BaseModel):
     priority: str
     timestamps: Optional[Timestamps] = None
 
-    class Config:
-        json_encoders = {ObjectId: str}
-        populate_by_name = True
+    model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
 
 
 # ==================== Performance Log Models ====================
@@ -196,9 +232,7 @@ class PerformanceLog(BaseModel):
     citizen_feedback: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
 
-    class Config:
-        json_encoders = {ObjectId: str}
-        populate_by_name = True
+    model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
 
 
 # ==================== Geo Feed Models ====================
@@ -222,6 +256,4 @@ class GeoFeed(BaseModel):
     geojson: Optional[GeoJSON] = None
     created_at: Optional[datetime] = None
 
-    class Config:
-        json_encoders = {ObjectId: str}
-        populate_by_name = True
+    model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)

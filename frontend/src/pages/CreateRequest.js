@@ -6,8 +6,8 @@ import {
   Popup,
   useMapEvents,
 } from "react-leaflet";
-import { useNavigate } from "react-router-dom";
-import { requestsAPI, categoriesAPI } from "../services/api";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { requestsAPI, categoriesAPI, citizensAPI } from "../services/api";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
@@ -39,17 +39,24 @@ function LocationMarker({ position, setPosition, setAddress }) {
 
 function CreateRequest() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preSelectedCitizenId = searchParams.get('citizenId');
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: "",
     address: "",
+    citizen_id: preSelectedCitizenId || "",
   });
   const [position, setPosition] = useState([31.9539, 35.9106]); // Default to Amman, Jordan
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [citizens, setCitizens] = useState([]);
+  const [loadingCitizens, setLoadingCitizens] = useState(true);
+  const [selectedCitizen, setSelectedCitizen] = useState(null);
 
   // Fetch categories from API
   useEffect(() => {
@@ -72,14 +79,42 @@ function CreateRequest() {
         setLoadingCategories(false);
       }
     };
+    
+    const fetchCitizens = async () => {
+      try {
+        const response = await citizensAPI.getAll();
+        setCitizens(response.data || []);
+        setLoadingCitizens(false);
+        
+        // If there's a pre-selected citizen, find and set it
+        if (preSelectedCitizenId && response.data) {
+          const citizen = response.data.find(c => c._id === preSelectedCitizenId);
+          if (citizen) {
+            setSelectedCitizen(citizen);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load citizens:", err);
+        setLoadingCitizens(false);
+      }
+    };
+    
     fetchCategories();
-  }, []);
+    fetchCitizens();
+  }, [preSelectedCitizenId]);
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    
+    // If citizen selection changed, update selected citizen
+    if (name === "citizen_id") {
+      const citizen = citizens.find(c => c._id === value);
+      setSelectedCitizen(citizen || null);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -88,12 +123,35 @@ function CreateRequest() {
     setError("");
 
     try {
+      const now = new Date();
+      
+      // Find selected citizen
+      const selectedCitizen = citizens.find(c => c._id === formData.citizen_id);
+      
       const requestData = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        address: formData.address,
         location: {
           type: "Point",
           coordinates: [position[1], position[0]], // [longitude, latitude]
         },
+        citizen_ref: selectedCitizen ? {
+          citizen_id: selectedCitizen._id,
+          full_name: selectedCitizen.full_name,
+          contact: {
+            email: selectedCitizen.email,
+            phone: selectedCitizen.phone
+          },
+          verification_state: selectedCitizen.verification_state
+        } : null,
+        timestamps: {
+          created_at: now.toISOString(),
+          updated_at: now.toISOString()
+        },
+        created_at: now.toISOString(),
+        updated_at: now.toISOString()
       };
 
       await requestsAPI.create(requestData);
@@ -114,6 +172,61 @@ function CreateRequest() {
         {error && <div className="error">{error}</div>}
 
         <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Citizen (Submit as) *</label>
+            <select
+              name="citizen_id"
+              value={formData.citizen_id}
+              onChange={handleChange}
+              required
+              disabled={loadingCitizens}
+            >
+              <option value="">
+                {loadingCitizens
+                  ? "Loading citizens..."
+                  : "Select a citizen"}
+              </option>
+              {citizens.map((citizen) => (
+                <option key={citizen._id} value={citizen._id}>
+                  {citizen.full_name} {citizen.verification_state === "verified" ? "✓" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Display Selected Citizen Info */}
+          {selectedCitizen && (
+            <div style={{
+              background: "#f0fdf4",
+              border: "2px solid #10b981",
+              borderRadius: "8px",
+              padding: "1rem",
+              marginBottom: "1rem"
+            }}>
+              <h3 style={{ margin: "0 0 0.75rem 0", color: "#065f46", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                ✅ Submitting as Verified Citizen
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.95rem" }}>
+                <div><strong>Name:</strong> {selectedCitizen.full_name}</div>
+                <div><strong>Email:</strong> {selectedCitizen.email || "N/A"}</div>
+                <div><strong>Phone:</strong> {selectedCitizen.phone || "N/A"}</div>
+                <div><strong>City:</strong> {selectedCitizen.city || "N/A"}</div>
+              </div>
+              {selectedCitizen.verification_state === "verified" && (
+                <div style={{ 
+                  marginTop: "0.75rem", 
+                  padding: "0.5rem", 
+                  background: "#dcfce7", 
+                  borderRadius: "4px",
+                  fontSize: "0.9rem",
+                  color: "#065f46"
+                }}>
+                  ✓ You can track this report, add comments, and upload evidence after submission
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="form-group">
             <label>Title *</label>
             <input

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import requests, categories, users, performance_logs
+from app.routers import requests, categories, users, citizens, performance_logs
+from app.routers import agents
 
 app = FastAPI(
     title="Citizen Services Tracker API",
@@ -21,7 +22,9 @@ app.add_middleware(
 app.include_router(requests.router, prefix="/requests", tags=["Service Requests"])
 app.include_router(categories.router, prefix="/categories", tags=["Categories"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
+app.include_router(citizens.router, prefix="/citizens", tags=["Citizens"])
 app.include_router(performance_logs.router, prefix="/performance-logs", tags=["Performance Logs"])
+app.include_router(agents.router, prefix="/agents", tags=["Service Agents"]) 
 
 
 @app.get("/")
