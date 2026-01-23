@@ -6,9 +6,7 @@ from typing import List
 
 router = APIRouter()
 
-
 def convert_objectids(obj):
-    """Recursively convert all ObjectIds to strings in a document"""
     if isinstance(obj, ObjectId):
         return str(obj)
     elif isinstance(obj, dict):
@@ -18,10 +16,8 @@ def convert_objectids(obj):
     else:
         return obj
 
-
 @router.get("/", response_model=List[Category])
 async def get_all_categories(active_only: bool = True):
-    """Get all categories"""
     try:
         query = {"active": True} if active_only else {}
         categories = list(categories_collection.find(query))
@@ -30,10 +26,8 @@ async def get_all_categories(active_only: bool = True):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/{category_id}", response_model=Category)
 async def get_category(category_id: str):
-    """Get specific category"""
     try:
         category = categories_collection.find_one({"_id": ObjectId(category_id)})
         if not category:
@@ -43,10 +37,8 @@ async def get_category(category_id: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.post("/", response_model=Category)
 async def create_category(category: Category):
-    """Create new category"""
     try:
         category_dict = category.dict(exclude={"id"}, exclude_none=True)
         result = categories_collection.insert_one(category_dict)
@@ -55,10 +47,8 @@ async def create_category(category: Category):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.patch("/{category_id}")
 async def update_category(category_id: str, category: Category):
-    """Update category"""
     try:
         update_data = category.dict(exclude={"id"}, exclude_none=True)
         result = categories_collection.update_one(
@@ -72,14 +62,12 @@ async def update_category(category_id: str, category: Category):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.delete("/{category_id}")
 async def delete_category(category_id: str):
-    """Delete category"""
     try:
         result = categories_collection.delete_one({"_id": ObjectId(category_id)})
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="Category not found")
-        return {"message": "Category deleted successfully"}
+        return {"message": "Category deleted"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

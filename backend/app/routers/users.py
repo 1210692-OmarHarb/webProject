@@ -6,10 +6,8 @@ from typing import List
 
 router = APIRouter()
 
-
 @router.get("/", response_model=List[User])
 async def get_all_users(role: str = None):
-    """Get all users, optionally filtered by role"""
     try:
         query = {"role": role} if role else {}
         users = list(users_collection.find(query))
@@ -17,10 +15,8 @@ async def get_all_users(role: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/{user_id}", response_model=User)
 async def get_user(user_id: str):
-    """Get specific user"""
     try:
         user = users_collection.find_one({"_id": ObjectId(user_id)})
         if not user:
@@ -29,12 +25,9 @@ async def get_user(user_id: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.post("/", response_model=User)
 async def create_user(user: User):
-    """Create new user (staff/agent)"""
     try:
-        # Check if email already exists
         existing = users_collection.find_one({"email": user.email})
         if existing:
             raise HTTPException(status_code=400, detail="Email already exists")
@@ -46,10 +39,8 @@ async def create_user(user: User):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.patch("/{user_id}")
 async def update_user(user_id: str, user: User):
-    """Update user"""
     try:
         update_data = user.dict(exclude={"id"}, exclude_none=True)
         result = users_collection.update_one(
@@ -63,10 +54,8 @@ async def update_user(user_id: str, user: User):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 @router.delete("/{user_id}")
 async def delete_user(user_id: str):
-    """Delete user"""
     try:
         result = users_collection.delete_one({"_id": ObjectId(user_id)})
         if result.deleted_count == 0:

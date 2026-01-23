@@ -1,37 +1,40 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import requests, categories, users, citizens, performance_logs
-from app.routers import agents
+from fastapi.staticfiles import StaticFiles
+from app.routers import requests, categories, users, citizens, performance_logs, agents, analytics
 
 app = FastAPI(
     title="Citizen Services Tracker API",
     version="2.0.0",
-    description="Advanced MIS for managing citizen service requests with workflow, SLA, and analytics"
+    description="API for managing citizen service requests"
 )
 
-# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # React dev servers
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(requests.router, prefix="/requests", tags=["Service Requests"])
+# Serve uploaded evidence files
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
+app.include_router(requests.router, prefix="/requests", tags=["Requests"])
 app.include_router(categories.router, prefix="/categories", tags=["Categories"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(citizens.router, prefix="/citizens", tags=["Citizens"])
-app.include_router(performance_logs.router, prefix="/performance-logs", tags=["Performance Logs"])
-app.include_router(agents.router, prefix="/agents", tags=["Service Agents"]) 
-
+app.include_router(performance_logs.router, prefix="/performance-logs", tags=["Logs"])
+app.include_router(agents.router, prefix="/agents", tags=["Agents"])
+app.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
 
 @app.get("/")
 def root():
-    return {"status": "CST API running", "version": "1.0.0"}
-
+    return {"message": "Citizen Services API"}
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {"status": "OK"}

@@ -1,54 +1,31 @@
-"""
-Export current MongoDB contents to backend/seed_snapshot.py
-This lets seed_complete.py seed from your live database snapshot.
-"""
 import os
 import sys
 from datetime import datetime
 from typing import Any
-
-# Ensure we can import app.database
 CURRENT_DIR = os.path.dirname(__file__)
 sys.path.insert(0, CURRENT_DIR)
-
 from app.database import db  # type: ignore
 
 
 def py_literal(value: Any) -> str:
-    """Return a Python code literal string for MongoDB/BSON friendly types.
-    - ObjectId -> ObjectId("<hex>")
-    - datetime -> datetime.fromisoformat("<iso>")
-    - dict/list -> recursively formatted
-    - str/int/float/bool/None -> repr
-    """
     try:
         from bson import ObjectId  # type: ignore
-    except Exception:  # pragma: no cover
+    except Exception:
         ObjectId = None  # type: ignore
 
-    # ObjectId
     if ObjectId is not None and isinstance(value, ObjectId):
         return f'ObjectId("{str(value)}")'
-
-    # datetime
     if isinstance(value, datetime):
-        # Use ISO format; naive datetimes are treated as-is
         return f'datetime.fromisoformat("{value.isoformat()}")'
-
-    # dict
     if isinstance(value, dict):
         items = []
         for k, v in value.items():
             items.append(f'{repr(k)}: {py_literal(v)}')
         return '{' + ', '.join(items) + '}'
-
-    # list/tuple
     if isinstance(value, (list, tuple)):
         inner = ', '.join(py_literal(v) for v in value)
         open_b, close_b = ('[', ']') if isinstance(value, list) else ('(', ')')
         return f'{open_b}{inner}{close_b}'
-
-    # fallback for primitives
     return repr(value)
 
 
@@ -66,6 +43,8 @@ def main() -> None:
         'comments',
         'ratings',
         'performance_logs',
+        'service_agents',
+        'geo_feeds',
     ]
 
     header = (

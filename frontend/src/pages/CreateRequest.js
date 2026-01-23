@@ -11,7 +11,6 @@ import { requestsAPI, categoriesAPI, citizensAPI } from "../services/api";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Fix for default marker icon in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png"),
@@ -19,20 +18,31 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
 });
 
-function LocationMarker({ position, setPosition, setAddress }) {
+function LocationMarker({
+  position,
+  setPosition,
+  setAddress,
+  setZone,
+  getZoneId,
+}) {
   useMapEvents({
     click(e) {
-      setPosition([e.latlng.lat, e.latlng.lng]);
-      // Reverse geocoding would go here in a real app
-      setAddress(
-        `Location: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`,
-      );
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      setPosition([lat, lng]);
+      setAddress(`Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      const detectedZone = getZoneId(lat, lng);
+      setZone(detectedZone);
     },
   });
 
   return position ? (
     <Marker position={position}>
-      <Popup>Selected Location</Popup>
+      <Popup>
+        <strong>Selected Location</strong>
+        <br />
+        Click anywhere to move
+      </Popup>
     </Marker>
   ) : null;
 }
@@ -40,8 +50,19 @@ function LocationMarker({ position, setPosition, setAddress }) {
 function CreateRequest() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const preSelectedCitizenId = searchParams.get('citizenId');
-  
+  const preSelectedCitizenId = searchParams.get("citizenId");
+
+  const getZoneId = (lat, lng) => {
+    if (lat >= 31.93 && lat <= 31.96 && lng >= 35.9 && lng <= 35.93) {
+      return "ZONE-DT-01";
+    } else if (lat >= 31.96 && lng >= 35.9) {
+      return "ZONE-N-03";
+    } else if (lat >= 31.93 && lng <= 35.9) {
+      return "ZONE-W-02";
+    }
+    return "ZONE-DT-01";
+  };
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -49,7 +70,8 @@ function CreateRequest() {
     address: "",
     citizen_id: preSelectedCitizenId || "",
   });
-  const [position, setPosition] = useState([31.9539, 35.9106]); // Default to Amman, Jordan
+  const [position, setPosition] = useState([31.9539, 35.9106]);
+  const [currentZone, setCurrentZone] = useState("ZONE-DT-01");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [categories, setCategories] = useState([]);
@@ -58,7 +80,6 @@ function CreateRequest() {
   const [loadingCitizens, setLoadingCitizens] = useState(true);
   const [selectedCitizen, setSelectedCitizen] = useState(null);
 
-  // Fetch categories from API
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -67,7 +88,6 @@ function CreateRequest() {
         setLoadingCategories(false);
       } catch (err) {
         console.error("Failed to load categories:", err);
-        // Fallback to hardcoded categories if API fails
         setCategories([
           { _id: "1", name: "Pothole" },
           { _id: "2", name: "Streetlight" },
@@ -79,26 +99,26 @@ function CreateRequest() {
         setLoadingCategories(false);
       }
     };
-    
+
     const fetchCitizens = async () => {
       try {
         const response = await citizensAPI.getAll();
         setCitizens(response.data || []);
         setLoadingCitizens(false);
-        
-        // If there's a pre-selected citizen, find and set it
+
         if (preSelectedCitizenId && response.data) {
-          const citizen = response.data.find(c => c._id === preSelectedCitizenId);
+          const citizen = response.data.find(
+            (c) => c._id === preSelectedCitizenId,
+          );
           if (citizen) {
             setSelectedCitizen(citizen);
           }
         }
       } catch (err) {
-        console.error("Failed to load citizens:", err);
         setLoadingCitizens(false);
       }
     };
-    
+
     fetchCategories();
     fetchCitizens();
   }, [preSelectedCitizenId]);
@@ -109,10 +129,9 @@ function CreateRequest() {
       ...formData,
       [name]: value,
     });
-    
-    // If citizen selection changed, update selected citizen
+
     if (name === "citizen_id") {
-      const citizen = citizens.find(c => c._id === value);
+      const citizen = citizens.find((c) => c._id === value);
       setSelectedCitizen(citizen || null);
     }
   };
@@ -120,14 +139,14 @@ function CreateRequest() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     try {
       const now = new Date();
-      
-      // Find selected citizen
-      const selectedCitizen = citizens.find(c => c._id === formData.citizen_id);
-      
+
+      const selectedCitizen = citizens.find(
+        (c) => c._id === formData.citizen_id,
+      );
+
       const requestData = {
         title: formData.title,
         description: formData.description,
@@ -135,23 +154,26 @@ function CreateRequest() {
         address: formData.address,
         location: {
           type: "Point",
-          coordinates: [position[1], position[0]], // [longitude, latitude]
+          coordinates: [position[1], position[0]],
+          zone_id: getZoneId(position[0], position[1]),
         },
-        citizen_ref: selectedCitizen ? {
-          citizen_id: selectedCitizen._id,
-          full_name: selectedCitizen.full_name,
-          contact: {
-            email: selectedCitizen.email,
-            phone: selectedCitizen.phone
-          },
-          verification_state: selectedCitizen.verification_state
-        } : null,
+        citizen_ref: selectedCitizen
+          ? {
+              citizen_id: selectedCitizen._id,
+              full_name: selectedCitizen.full_name,
+              contact: {
+                email: selectedCitizen.email,
+                phone: selectedCitizen.phone,
+              },
+              verification_state: selectedCitizen.verification_state,
+            }
+          : null,
         timestamps: {
           created_at: now.toISOString(),
-          updated_at: now.toISOString()
+          updated_at: now.toISOString(),
         },
         created_at: now.toISOString(),
-        updated_at: now.toISOString()
+        updated_at: now.toISOString(),
       };
 
       await requestsAPI.create(requestData);
@@ -182,46 +204,73 @@ function CreateRequest() {
               disabled={loadingCitizens}
             >
               <option value="">
-                {loadingCitizens
-                  ? "Loading citizens..."
-                  : "Select a citizen"}
+                {loadingCitizens ? "Loading citizens..." : "Select a citizen"}
               </option>
               {citizens.map((citizen) => (
                 <option key={citizen._id} value={citizen._id}>
-                  {citizen.full_name} {citizen.verification_state === "verified" ? "✓" : ""}
+                  {citizen.full_name}{" "}
+                  {citizen.verification_state === "verified" ? "✓" : ""}
                 </option>
               ))}
             </select>
           </div>
-          
+
           {/* Display Selected Citizen Info */}
           {selectedCitizen && (
-            <div style={{
-              background: "#f0fdf4",
-              border: "2px solid #10b981",
-              borderRadius: "8px",
-              padding: "1rem",
-              marginBottom: "1rem"
-            }}>
-              <h3 style={{ margin: "0 0 0.75rem 0", color: "#065f46", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                ✅ Submitting as Verified Citizen
+            <div
+              style={{
+                background: "white",
+                border: "2px solid black",
+                borderRadius: "8px",
+                padding: "1rem",
+                marginBottom: "1rem",
+              }}
+            >
+              <h3
+                style={{
+                  margin: "0 0 0.75rem 0",
+                  color: "#065f46",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                Submitting as Verified Citizen
               </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.95rem" }}>
-                <div><strong>Name:</strong> {selectedCitizen.full_name}</div>
-                <div><strong>Email:</strong> {selectedCitizen.email || "N/A"}</div>
-                <div><strong>Phone:</strong> {selectedCitizen.phone || "N/A"}</div>
-                <div><strong>City:</strong> {selectedCitizen.city || "N/A"}</div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "0.5rem",
+                  fontSize: "0.95rem",
+                }}
+              >
+                <div>
+                  <strong>Name:</strong> {selectedCitizen.full_name}
+                </div>
+                <div>
+                  <strong>Email:</strong> {selectedCitizen.email || "N/A"}
+                </div>
+                <div>
+                  <strong>Phone:</strong> {selectedCitizen.phone || "N/A"}
+                </div>
+                <div>
+                  <strong>City:</strong> {selectedCitizen.city || "N/A"}
+                </div>
               </div>
               {selectedCitizen.verification_state === "verified" && (
-                <div style={{ 
-                  marginTop: "0.75rem", 
-                  padding: "0.5rem", 
-                  background: "#dcfce7", 
-                  borderRadius: "4px",
-                  fontSize: "0.9rem",
-                  color: "#065f46"
-                }}>
-                  ✓ You can track this report, add comments, and upload evidence after submission
+                <div
+                  style={{
+                    marginTop: "0.75rem",
+                    padding: "0.5rem",
+                    background: "#dcfce7",
+                    borderRadius: "6px",
+                    fontSize: "0.9rem",
+                    color: "#065f46",
+                  }}
+                >
+                  ✓ You can track this report, add comments, and upload evidence
+                  after submission
                 </div>
               )}
             </div>
@@ -311,18 +360,30 @@ function CreateRequest() {
                   setAddress={(addr) =>
                     setFormData({ ...formData, address: addr })
                   }
+                  setZone={setCurrentZone}
+                  getZoneId={getZoneId}
                 />
               </MapContainer>
             </div>
-            <p
+            <div
               style={{
-                fontSize: "0.875rem",
-                color: "#7f8c8d",
-                marginTop: "0.5rem",
+                marginTop: "0.75rem",
+                padding: "0.75rem",
+                backgroundColor: "#f8f9fa",
+                border: "2px solid black",
+                borderRadius: "6px",
               }}
             >
-              Selected: {position[0].toFixed(4)}, {position[1].toFixed(4)}
-            </p>
+              <p style={{ margin: 0, fontSize: "0.875rem" }}>
+                <strong>Zone:</strong>{" "}
+                <span style={{ fontWeight: "bold", color: "#000" }}>
+                  {currentZone}
+                </span>
+                {" | "}
+                <strong>Coordinates:</strong> {position[0].toFixed(4)},{" "}
+                {position[1].toFixed(4)}
+              </p>
+            </div>
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loading}>

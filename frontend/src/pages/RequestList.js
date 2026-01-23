@@ -16,7 +16,6 @@ function RequestList() {
 
   const statuses = ["pending", "in_progress", "resolved"];
 
-  // Fetch categories from API
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -25,7 +24,6 @@ function RequestList() {
         setLoadingCategories(false);
       } catch (err) {
         console.error("Failed to load categories:", err);
-        // Fallback to hardcoded categories if API fails
         setCategories([
           { _id: "1", name: "Pothole" },
           { _id: "2", name: "Streetlight" },
@@ -100,6 +98,15 @@ function RequestList() {
               name="status"
               value={filters.status}
               onChange={handleFilterChange}
+              style={{
+                padding: "1rem 1.25rem",
+                border: "2px solid black",
+                borderRadius: "6px",
+                fontSize: "1rem",
+                backgroundColor: "white",
+                color: "black",
+                cursor: "pointer",
+              }}
             >
               <option value="">All Statuses</option>
               {statuses.map((status) => (
@@ -117,6 +124,15 @@ function RequestList() {
               value={filters.category}
               onChange={handleFilterChange}
               disabled={loadingCategories}
+              style={{
+                padding: "1rem 1.25rem",
+                border: "2px solid black",
+                borderRadius: "6px",
+                fontSize: "1rem",
+                backgroundColor: "white",
+                color: "black",
+                cursor: "pointer",
+              }}
             >
               <option value="">All Categories</option>
               {categories.map((cat) => {
@@ -161,7 +177,10 @@ function RequestList() {
                       <strong>Address:</strong> {request.address}
                     </p>
                     <p>
-                      <strong>Created:</strong> {formatDate(request.timestamps?.created_at || request.created_at)}
+                      <strong>Created:</strong>{" "}
+                      {formatDate(
+                        request.timestamps?.created_at || request.created_at,
+                      )}
                     </p>
                   </div>
                   <span className={`status-badge status-${request.status}`}>

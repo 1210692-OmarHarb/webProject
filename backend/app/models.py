@@ -22,9 +22,6 @@ class PyObjectId(ObjectId):
     def __get_pydantic_json_schema__(cls, schema, handler):
         return {"type": "string"}
 
-
-# ==================== Basic Models ====================
-
 class Location(BaseModel):
     type: str = "Point"
     coordinates: List[float]
@@ -43,25 +40,19 @@ class Category(BaseModel):
     active: bool = True
     created_at: Optional[datetime] = None
 
-
-# ==================== User Models ====================
-
 class User(BaseModel):
     model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
     
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     username: str
     email: str
-    password: str  # In production, should be hashed
-    role: str  # "citizen", "staff", "agent", "admin"
+    password: str
+    role: str
     full_name: Optional[str] = None
     department: Optional[str] = None
     verification_state: Optional[str] = "unverified"
     active: bool = True
     created_at: Optional[datetime] = None
-
-
-# ==================== Citizen Models ====================
 
 class ContactPreferences(BaseModel):
     email_notifications: bool = True
@@ -86,8 +77,8 @@ class CitizenProfile(BaseModel):
     neighborhood: Optional[str] = None
     city: Optional[str] = None
     zone_id: Optional[str] = None
-    verification_state: str = "unverified"  # verified, unverified, pending
-    verification_token: Optional[str] = None  # OTP stub
+    verification_state: str = "unverified"
+    verification_token: Optional[str] = None
     verification_token_expires: Optional[datetime] = None
     is_anonymous: bool = False
     contact_preferences: Optional[ContactPreferences] = None
@@ -96,18 +87,15 @@ class CitizenProfile(BaseModel):
     total_requests: int = 0
     created_at: Optional[datetime] = None
 
-
-# ==================== Service Request Models ====================
-
 class Comment(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     request_id: PyObjectId
-    author_type: str  # citizen, agent, staff
+    author_type: str
     author_id: PyObjectId
     author_name: str
     content: str = Field(..., min_length=1, max_length=1000)
-    parent_comment_id: Optional[PyObjectId] = None  # For threaded comments
-    is_internal: bool = False  # Internal notes vs public comments
+    parent_comment_id: Optional[PyObjectId] = None
+    is_internal: bool = False
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
@@ -117,8 +105,8 @@ class Rating(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     request_id: PyObjectId
     citizen_id: PyObjectId
-    stars: int = Field(..., ge=1, le=5)  # 1-5 stars
-    reason_code: Optional[str] = None  # quick_resolution, poor_quality, incomplete, excellent_service
+    stars: int = Field(..., ge=1, le=5)
+    reason_code: Optional[str] = None
     comment: Optional[str] = None
     dispute_flag: bool = False
     dispute_reason: Optional[str] = None
@@ -128,7 +116,7 @@ class Rating(BaseModel):
 
 
 class WorkflowState(BaseModel):
-    current_state: str  # new, triaged, assigned, in_progress, resolved, closed
+    current_state: str
     allowed_next: List[str] = []
     transition_rules_version: str = "v1.0"
 
@@ -141,7 +129,7 @@ class SLAPolicy(BaseModel):
 
 
 class Evidence(BaseModel):
-    type: str  # photo, video, document
+    type: str
     url: str
     sha256: Optional[str] = None
     uploaded_by: str = "citizen"
@@ -178,8 +166,8 @@ class ServiceRequest(BaseModel):
     category: str
     sub_category: Optional[str] = None
     tags: List[str] = []
-    status: str = "new"  # new, triaged, assigned, in_progress, resolved, closed
-    priority: str = "P2"  # P0, P1, P2, P3
+    status: str = "new"
+    priority: str = "P2"
     workflow: Optional[WorkflowState] = None
     sla_policy: Optional[SLAPolicy] = None
     location: Location
@@ -208,10 +196,9 @@ class ServiceRequestResponse(BaseModel):
     model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
 
 
-# ==================== Performance Log Models ====================
 
 class LogEvent(BaseModel):
-    type: str  # created, triaged, assigned, sla_escalation, resolved, closed
+    type: str
     by: Optional[Dict[str, str]] = None
     at: datetime
     meta: Optional[Dict[str, Any]] = None
@@ -220,7 +207,7 @@ class LogEvent(BaseModel):
 class ComputedKPIs(BaseModel):
     resolution_minutes: Optional[int] = None
     sla_target_hours: int = 48
-    sla_state: str = "on_track"  # on_track, at_risk, breached
+    sla_state: str = "on_track"
     escalation_count: int = 0
 
 
@@ -233,9 +220,6 @@ class PerformanceLog(BaseModel):
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(json_encoders={ObjectId: str}, populate_by_name=True)
-
-
-# ==================== Geo Feed Models ====================
 
 class GeoFeature(BaseModel):
     type: str = "Feature"

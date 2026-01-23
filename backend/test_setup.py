@@ -1,16 +1,10 @@
-"""
-Simple test script to verify MongoDB connection and API setup
-"""
-
 from app.database import db, requests_collection
 from pymongo.errors import ConnectionFailure
 
 
 def test_mongodb_connection():
-    """Test MongoDB connection"""
     print("🔍 Testing MongoDB connection...")
     try:
-        # Attempt to connect
         db.client.admin.command('ping')
         print("✅ MongoDB connection successful!")
         return True
@@ -20,14 +14,11 @@ def test_mongodb_connection():
 
 
 def test_database_collections():
-    """Test database collections"""
     print("\n🔍 Testing database collections...")
     try:
-        # List all collections
         collections = db.list_collection_names()
         print(f"📁 Available collections: {collections}")
-        
-        # Check if requests collection exists
+
         if "requests" in collections:
             count = requests_collection.count_documents({})
             print(f"✅ Requests collection exists with {count} documents")
@@ -41,7 +32,6 @@ def test_database_collections():
 
 
 def test_indexes():
-    """Test database indexes"""
     print("\n🔍 Testing database indexes...")
     try:
         indexes = list(requests_collection.list_indexes())
