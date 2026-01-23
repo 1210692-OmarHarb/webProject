@@ -32,7 +32,7 @@ Create `backend/.env`:
 ```
 MONGO_URI=mongodb://localhost:27017/
 DATABASE_NAME=cst_db
-STAFF_API_KEY=test_staff_key
+STAFF_API_KEY=test101
 ```
 
 ### 3. Seed Database
@@ -147,7 +147,7 @@ frontend/
 Staff actions require API key:
 
 ```
-X-Staff-Key: test_staff_key
+X-Staff-Key: test101
 ```
 
 Agent actions require agent ID:
